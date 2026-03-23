@@ -1,0 +1,3 @@
+# This directory holds generated dashboard ConfigMaps.
+# Run: python3 grafana-helm/dashboards/migrate.py
+# Then commit the generated *.yaml files here.

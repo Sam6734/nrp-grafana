@@ -1,0 +1,339 @@
+# =============================================================================
+# Grafana Helm Values — NRP Nautilus, monitoring namespace
+# Chart: grafana/grafana (https://grafana.github.io/helm-charts)
+# Pinned chart version: 8.5.2  (run: helm search repo grafana/grafana --versions | head -5)
+#
+# Replaces: kube-prometheus Jsonnet Grafana deployment
+# Hostname: https://grafana-dev.nrp.nautilus.io
+# Auth: Authentik Generic OAuth → all authenticated users = GrafanaAdmin
+# Anonymous: Viewer
+# Datasources: Thanos (primary), NRP ClickHouse, Elasticsearch
+# =============================================================================
+
+# ── Naming ────────────────────────────────────────────────────────────────────
+# Avoids conflict with the existing kube-prometheus Grafana service.
+# When promoting to production, change to "grafana" (or remove override).
+fullnameOverride: grafana-dev
+
+# ── Replicas ──────────────────────────────────────────────────────────────────
+replicas: 1
+
+# ── Image ─────────────────────────────────────────────────────────────────────
+image:
+  repository: docker.io/grafana/grafana
+  # Pin to a specific tag for reproducibility.
+  # Chart 8.5.2 ships Grafana 11.4.0; update tag when upgrading chart.
+  tag: "11.4.0"
+  pullPolicy: IfNotPresent
+
+# ── Admin credentials ─────────────────────────────────────────────────────────
+# References the `grafana-admin` SealedSecret (committed to manifests/).
+admin:
+  existingSecret: grafana-admin
+  userKey: admin-user
+  passwordKey: admin-password
+
+# ── Secret injection via SealedSecrets ────────────────────────────────────────
+# All secrets are SealedSecrets committed to manifests/ — safe to push to git.
+# GF_ env vars automatically override matching grafana.ini keys.
+envValueFrom:
+  # Authentik OAuth (from manifests/authentik-sealedsecret.yaml)
+  GF_AUTH_GENERIC_OAUTH_CLIENT_ID:
+    secretKeyRef:
+      name: authentik
+      key: client_id
+  GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET:
+    secretKeyRef:
+      name: authentik
+      key: client_secret
+  # Elasticsearch basic auth (from manifests/es-credentials-sealedsecret.yaml)
+  GF_ES_PASSWORD:
+    secretKeyRef:
+      name: es-credentials
+      key: basicAuthPassword
+
+# ── Security contexts (matching kube-prometheus style) ────────────────────────
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 472
+  runAsGroup: 472
+  fsGroup: 472
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 472
+  seccompProfile:
+    type: RuntimeDefault
+
+# ── Resources (matching existing kube-prometheus Grafana limits) ──────────────
+resources:
+  requests:
+    cpu: "1"
+    memory: "1Gi"
+  limits:
+    cpu: "2"
+    memory: "10Gi"
+
+# ── Persistent storage ────────────────────────────────────────────────────────
+# New PVC — do NOT reuse Prometheus/Thanos volumes.
+persistence:
+  enabled: true
+  type: pvc
+  storageClassName: rook-ceph-block
+  size: 20Gi
+  accessModes:
+    - ReadWriteOnce
+
+# ── Service ───────────────────────────────────────────────────────────────────
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 3000
+  portName: http
+
+# ── Pods ──────────────────────────────────────────────────────────────────────
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3000"
+  prometheus.io/path: "/metrics"
+
+podLabels:
+  app.kubernetes.io/name: grafana
+  app.kubernetes.io/component: visualization
+
+# ── Plugins ───────────────────────────────────────────────────────────────────
+# grafana-clickhouse-datasource required for NRP Clickhouse datasource.
+plugins:
+  - grafana-clickhouse-datasource
+
+# ── Grafana main configuration ────────────────────────────────────────────────
+grafana.ini:
+
+  server:
+    domain: grafana-dev.nrp.nautilus.io
+    root_url: https://grafana-dev.nrp.nautilus.io
+    serve_from_sub_path: false
+
+  analytics:
+    reporting_enabled: false
+    check_for_updates: false
+    check_for_plugin_updates: false
+
+  log:
+    mode: console
+    level: info
+
+  # ── Auth global ─────────────────────────────────────────────────────────────
+  auth:
+    disable_login_form: false
+    disable_signout_menu: false
+    # Set to true later if you want Authentik-only login (no local form).
+    oauth_auto_login: false
+    # After sign-out, redirect back to Authentik's end-session endpoint.
+    # Update <slug> to match your Authentik provider slug (e.g. "grafana").
+    signout_redirect_url: https://authentik.nrp-nautilus.io/application/o/grafana/end-session/
+
+  # ── Authentik Generic OAuth ──────────────────────────────────────────────────
+  # client_id and client_secret are injected via GF_AUTH_GENERIC_OAUTH_CLIENT_ID
+  # and GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET env vars (see envValueFrom above).
+  #
+  # IMPORTANT: Verify your Authentik provider slug matches these URLs.
+  # Standard Authentik URL pattern: /application/o/<slug>/
+  auth.generic_oauth:
+    enabled: true
+    name: Authentik
+    icon: signin
+    scopes: openid email profile
+    auth_url: https://authentik.nrp-nautilus.io/application/o/grafana/authorize/
+    token_url: https://authentik.nrp-nautilus.io/application/o/grafana/token/
+    api_url: https://authentik.nrp-nautilus.io/application/o/userinfo/
+    allow_sign_up: true
+    use_pkce: true
+    # All Authentik-authenticated users → GrafanaAdmin.
+    # To scope by group later: contains(groups[*], 'grafana-admins') && 'GrafanaAdmin' || 'Viewer'
+    role_attribute_path: "'GrafanaAdmin'"
+    role_attribute_strict: true
+    allow_assign_grafana_admin: true
+    skip_org_role_sync: false
+
+  # ── Anonymous access ──────────────────────────────────────────────────────
+  auth.anonymous:
+    enabled: true
+    org_name: Main Org.
+    org_role: Viewer
+    hide_version: true
+
+  # ── Security ─────────────────────────────────────────────────────────────
+  security:
+    # allow_embedding matches the existing kube-prometheus Grafana config.
+    allow_embedding: true
+    cookie_secure: true
+    cookie_samesite: lax
+    content_security_policy: true
+
+  # ── Users ────────────────────────────────────────────────────────────────
+  users:
+    auto_assign_org: true
+    auto_assign_org_role: Viewer
+    default_theme: dark
+
+  # ── Feature toggles ──────────────────────────────────────────────────────
+  feature_toggles:
+    enable: publicDashboards
+
+# ── Datasource provisioning ───────────────────────────────────────────────────
+# UIDs are stable and preserved from the existing jsonnet deployment so that
+# dashboard panel datasource references continue to resolve correctly.
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+
+      # ── Direct Prometheus (matches existing deployment datasource) ──────
+      - name: prometheus
+        type: prometheus
+        uid: prometheus
+        url: http://prometheus-k8s.monitoring.svc:9090
+        access: proxy
+        isDefault: false
+        editable: false
+        orgId: 1
+        version: 1
+        jsonData:
+          timeInterval: "30s"
+          httpMethod: POST
+
+      # ── Primary: Thanos (Prometheus-compatible) ─────────────────────────
+      - name: thanos
+        type: prometheus
+        uid: thanos
+        url: http://thanos-querier.monitoring.svc:9090
+        access: proxy
+        isDefault: true
+        editable: false
+        orgId: 1
+        version: 1
+        jsonData:
+          timeInterval: "30s"
+          httpMethod: POST
+
+      # ── NRP ClickHouse (accounting) ─────────────────────────────────────
+      # Requires grafana-clickhouse-datasource plugin (see plugins above).
+      - name: NRP Clickhouse
+        type: grafana-clickhouse-datasource
+        uid: clickhouse
+        access: proxy
+        editable: false
+        orgId: 1
+        version: 1
+        jsonData:
+          host: clickhouse-access-accounting.clickhouse.svc.cluster.local
+          port: 9000
+          protocol: native
+          defaultDatabase: access_accounting
+          tlsSkipVerify: true
+          dialTimeout: "10"
+          queryTimeout: "60"
+
+      # ── Elasticsearch ───────────────────────────────────────────────────
+      # UID MKTR8nTnz preserved from existing deployment for dashboard compat.
+      - name: Elasticsearch
+        type: elasticsearch
+        uid: MKTR8nTnz
+        url: https://elasticsearch-es-http.igrok-elastic:9200
+        access: proxy
+        editable: false
+        orgId: 1
+        version: 1
+        database: nodes-0
+        basicAuth: true
+        basicAuthUser: prp
+        secureJsonData:
+          # Injected at runtime from the es-credentials SealedSecret.
+          basicAuthPassword: $GF_ES_PASSWORD
+        jsonData:
+          esVersion: "7.10.0"
+          includeFrozen: false
+          maxConcurrentShardRequests: 5
+          timeField: timestamp
+          tlsSkipVerify: true
+
+# ── Dashboard sidecar ─────────────────────────────────────────────────────────
+# Watches for ConfigMaps in the monitoring namespace labeled:
+#   grafana_dashboard: "1"
+# And annotation:
+#   grafana_folder: "<FolderName>"
+#
+# Run `python3 grafana-helm/dashboards/migrate.py` to generate the ConfigMaps.
+sidecar:
+  dashboards:
+    enabled: true
+    label: grafana_dashboard
+    labelValue: "1"
+    searchNamespace: monitoring
+    folder: /var/lib/grafana/dashboards
+    defaultFolderName: General
+    provider:
+      name: sidecarProvider
+      orgid: 1
+      type: file
+      disableDeletion: false
+      allowUiUpdates: true
+      foldersFromFilesStructure: false
+  datasources:
+    enabled: false
+  alerts:
+    enabled: false
+
+# ── Self-monitoring via ServiceMonitor ────────────────────────────────────────
+serviceMonitor:
+  enabled: true
+  namespace: monitoring
+  labels:
+    # Must match the Prometheus operator's serviceMonitorSelector.
+    prometheus: kube-prometheus
+  interval: 30s
+  path: /metrics
+  scheme: http
+
+# ── PodDisruptionBudget ───────────────────────────────────────────────────────
+# With replicas: 1, minAvailable: 0 allows voluntary disruptions.
+# Increase replicas and set minAvailable: 1 for HA production setup.
+podDisruptionBudget:
+  minAvailable: 0
+
+# ── Liveness / Readiness ─────────────────────────────────────────────────────
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# ── RBAC for sidecar ─────────────────────────────────────────────────────────
+rbac:
+  create: true
+  pspEnabled: false
+  namespaced: true
+
+serviceAccount:
+  create: true
+  autoMount: true

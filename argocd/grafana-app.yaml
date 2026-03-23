@@ -1,0 +1,78 @@
+# =============================================================================
+# Argo CD Application — Grafana DEV (Helm release)
+#
+# Uses Argo CD multi-source (requires Argo CD >= 2.6) to pull:
+#   • The Grafana Helm chart from the official Grafana chart repo
+#   • The values.yaml from THIS git repository (GitHub)
+#
+# Apply to Argo CD:
+#   kubectl -n argocd apply -f argocd/grafana-app.yaml
+#
+# Sync manually first:
+#   argocd app sync grafana-dev
+#
+# All secrets are SealedSecrets in manifests/ — no manual secret apply needed.
+# =============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-dev
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: monitoring
+    environment: dev
+  # Prevent Argo CD from deleting the PVC on app deletion.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/foreground
+
+spec:
+  project: default
+
+  # ── Multi-source: Helm chart + values from git ───────────────────────────
+  sources:
+    # Source 1: Official Grafana Helm chart.
+    # To upgrade: bump targetRevision, update image.tag in values.yaml, test.
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: grafana
+      targetRevision: "8.5.2"
+      helm:
+        releaseName: grafana-dev
+        # $values refers to source 2 below (the `ref: values` source).
+        valueFiles:
+          - $values/helm/values.yaml
+
+    # Source 2: GitHub repo — provides the values file reference.
+    - repoURL: https://github.com/sam6734/nrp-grafana.git
+      targetRevision: HEAD
+      ref: values
+
+  # ── Destination ──────────────────────────────────────────────────────────
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  # ── Sync policy ──────────────────────────────────────────────────────────
+  # Manual sync initially — review diff before every apply.
+  # To enable automated sync + self-heal later, uncomment the block below.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+    # automated:        # ← Uncomment to enable GitOps auto-sync
+    #   prune: true
+    #   selfHeal: true
+    #   allowEmpty: false
+
+  # ── Ignore diffs on mutable fields ───────────────────────────────────────
+  ignoreDifferences:
+    # Grafana updates its own deployment annotations at runtime.
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/metadata/annotations
+    # PVC storage requests can be expanded but not shrunk; ignore drift.
+    - group: ""
+      kind: PersistentVolumeClaim
+      jsonPointers:
+        - /spec/resources/requests/storage

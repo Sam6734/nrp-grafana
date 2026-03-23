@@ -1,0 +1,84 @@
+# =============================================================================
+# Argo CD Application — Grafana DEV supporting manifests
+#
+# Manages everything alongside the Helm release:
+#   • manifests/ingress.yaml                       (Ingress/HTTPRoute)
+#   • manifests/authentik-sealedsecret.yaml        (SealedSecret → authentik)
+#   • manifests/grafana-admin-sealedsecret.yaml    (SealedSecret → grafana-admin)
+#   • manifests/es-credentials-sealedsecret.yaml   (SealedSecret → es-credentials)
+#
+# Apply to Argo CD:
+#   kubectl -n argocd apply -f argocd/grafana-manifests-app.yaml
+#
+# Sealed secrets are decrypted automatically by the sealed-secrets controller.
+# No manual kubectl apply of secrets required.
+# =============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-dev-config
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: monitoring
+    environment: dev
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/foreground
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/sam6734/nrp-grafana.git
+    targetRevision: HEAD
+    path: manifests
+    directory:
+      recurse: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+    # automated:
+    #   prune: true
+    #   selfHeal: true
+
+---
+# Second application for dashboard ConfigMaps (kept separate so dashboard
+# updates don't trigger a full Grafana redeploy).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana-dev-dashboards
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: monitoring
+    environment: dev
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io/foreground
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/sam6734/nrp-grafana.git
+    targetRevision: HEAD
+    path: dashboards/configmaps
+    directory:
+      recurse: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+    # Dashboard ConfigMaps are safe to auto-sync once the pattern is stable:
+    # automated:
+    #   prune: true
+    #   selfHeal: true

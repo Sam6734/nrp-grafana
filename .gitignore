@@ -1,0 +1,21 @@
+# ── Plain-text secrets (NEVER commit these) ───────────────────────────────────
+# Use SealedSecrets in manifests/ instead.
+secrets/
+
+# ── macOS / editor junk ────────────────────────────────────────────────────────
+.DS_Store
+*.swp
+*.swo
+*~
+.idea/
+.vscode/settings.json
+
+# ── Python cache (dashboard migration script) ─────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# ── Dashboard ConfigMaps are committed to dashboards/configmaps/ ───────────────
+# Remove the line below once you want to track generated ConfigMaps in git.
+# dashboards/configmaps/*.yaml
