@@ -281,25 +281,13 @@ datasources:
 # Run `python3 grafana-helm/dashboards/migrate.py` to generate the ConfigMaps.
 sidecar:
   dashboards:
-    enabled: true
-    label: grafana_dashboard
-    labelValue: "1"
-    searchNamespace: monitoring
-    folder: /var/lib/grafana/dashboards
-    defaultFolderName: General
-    provider:
-      name: sidecarProvider
-      orgid: 1
-      type: file
-      # disableDeletion: true prevents the sidecar from removing dashboards when
-      # a ConfigMap is deleted — safer for shared environments.
-      disableDeletion: false
-      # allowUiUpdates: false makes provisioned dashboards read-only in the UI.
-      # Users must "Save as" to create an editable copy (saved to SQLite/PVC).
-      # Set to true only if you want UI edits to persist WITHOUT git — but note
-      # that any ConfigMap update will then overwrite those UI changes.
-      allowUiUpdates: false
-      foldersFromFilesStructure: false
+    # Sidecar disabled — dashboards are imported once via dashboards/import.py
+    # directly into Grafana's SQLite DB (backed by PVC).
+    # This means Authentik admins can edit any dashboard freely without risk
+    # of their changes being overwritten by a ConfigMap sync.
+    # To re-enable GitOps-managed dashboards, set enabled: true and run
+    # python3 dashboards/migrate.py to regenerate the ConfigMaps.
+    enabled: false
   datasources:
     enabled: false
   alerts:
