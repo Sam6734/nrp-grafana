@@ -197,9 +197,11 @@ datasources:
     datasources:
 
       # ── Direct Prometheus (matches existing deployment datasource) ──────
+      # UID P1809F7CD0C75ACF3 preserved from existing Grafana — dashboards
+      # such as GPU-Cluster-A100 and OSG-Shoveler reference this UID directly.
       - name: prometheus
         type: prometheus
-        uid: prometheus
+        uid: P1809F7CD0C75ACF3
         url: http://prometheus-k8s.monitoring.svc:9090
         access: proxy
         isDefault: false
@@ -211,9 +213,12 @@ datasources:
           httpMethod: POST
 
       # ── Primary: Thanos (Prometheus-compatible) ─────────────────────────
+      # UID PC96415006F908B67 preserved from existing Grafana — the majority
+      # of dashboards (Ceph, Cluster-usage, requests, GPU, etc.) reference
+      # this UID directly. Must match or all those panels will break.
       - name: thanos
         type: prometheus
-        uid: thanos
+        uid: PC96415006F908B67
         url: http://thanos-querier.monitoring.svc:9090
         access: proxy
         isDefault: true
@@ -225,10 +230,12 @@ datasources:
           httpMethod: POST
 
       # ── NRP ClickHouse (accounting) ─────────────────────────────────────
+      # UID ffgey3ow5ltz4f preserved from existing Grafana — NRP-Accounting
+      # dashboard references this UID directly.
       # Requires grafana-clickhouse-datasource plugin (see plugins above).
       - name: NRP Clickhouse
         type: grafana-clickhouse-datasource
-        uid: clickhouse
+        uid: ffgey3ow5ltz4f
         access: proxy
         editable: false
         orgId: 1
