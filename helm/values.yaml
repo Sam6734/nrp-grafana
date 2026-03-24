@@ -291,8 +291,14 @@ sidecar:
       name: sidecarProvider
       orgid: 1
       type: file
+      # disableDeletion: true prevents the sidecar from removing dashboards when
+      # a ConfigMap is deleted — safer for shared environments.
       disableDeletion: false
-      allowUiUpdates: true
+      # allowUiUpdates: false makes provisioned dashboards read-only in the UI.
+      # Users must "Save as" to create an editable copy (saved to SQLite/PVC).
+      # Set to true only if you want UI edits to persist WITHOUT git — but note
+      # that any ConfigMap update will then overwrite those UI changes.
+      allowUiUpdates: false
       foldersFromFilesStructure: false
   datasources:
     enabled: false
