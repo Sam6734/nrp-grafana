@@ -28,7 +28,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/sam6734/nrp-grafana.git
+    repoURL: https://github.com/Sam6734/nrp-grafana.git
     targetRevision: HEAD
     path: manifests
     directory:
@@ -64,7 +64,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/sam6734/nrp-grafana.git
+    repoURL: https://github.com/Sam6734/nrp-grafana.git
     targetRevision: HEAD
     path: dashboards/configmaps
     directory:

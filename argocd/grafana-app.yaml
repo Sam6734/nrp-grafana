@@ -42,7 +42,7 @@ spec:
           - $values/helm/values.yaml
 
     # Source 2: GitHub repo — provides the values file reference.
-    - repoURL: https://github.com/sam6734/nrp-grafana.git
+    - repoURL: https://github.com/Sam6734/nrp-grafana.git
       targetRevision: HEAD
       ref: values
 
