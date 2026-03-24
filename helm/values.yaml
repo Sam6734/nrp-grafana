@@ -4,7 +4,7 @@
 # Pinned chart version: 8.5.2  (run: helm search repo grafana/grafana --versions | head -5)
 #
 # Replaces: kube-prometheus Jsonnet Grafana deployment
-# Hostname: https://grafana-dev.nrp.nautilus.io
+# Hostname: https://grafana-dev.nrp-nautilus.io
 # Auth: Authentik Generic OAuth → all authenticated users = GrafanaAdmin
 # Anonymous: Viewer
 # Datasources: Thanos (primary), NRP ClickHouse, Elasticsearch
@@ -117,8 +117,8 @@ plugins:
 grafana.ini:
 
   server:
-    domain: grafana-dev.nrp.nautilus.io
-    root_url: https://grafana-dev.nrp.nautilus.io
+    domain: grafana-dev.nrp-nautilus.io
+    root_url: https://grafana-dev.nrp-nautilus.io
     serve_from_sub_path: false
 
   analytics:

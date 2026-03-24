@@ -1,39 +1,34 @@
 # =============================================================================
-# Grafana DEV — Kubernetes Ingress (HAProxy)
+# Grafana DEV — HTTPRoute (Gateway API)
 #
-# Hostname: grafana-dev.nrp.nautilus.io
-# TLS is terminated at the HAProxy ingress controller (no secretName required).
-# Backend service: grafana-dev (ClusterIP, port 80) — matches fullnameOverride.
+# Gateway:  ingress.haproxy  (sectionName: https, from: All namespaces)
+# Hostname: grafana-dev.nrp-nautilus.io
+# TLS:      terminated at the gateway (cert: gw-nrp-nautilus)
+# Backend:  grafana-dev service in monitoring namespace (port 80)
 # =============================================================================
-apiVersion: networking.k8s.io/v1
-kind: Ingress
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: grafana-dev
   namespace: monitoring
-  annotations:
-    kubernetes.io/ingress.class: haproxy
-    # Increase proxy timeouts to handle slow Grafana dashboard loads.
-    haproxy-ingress.github.io/timeout-client: "60s"
-    haproxy-ingress.github.io/timeout-connect: "5s"
-    haproxy-ingress.github.io/timeout-server: "60s"
-    # Needed for OAuth redirect flows.
-    haproxy-ingress.github.io/proxy-body-size: "5m"
 spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ingress
+      namespace: haproxy
+      sectionName: https
+  hostnames:
+    - grafana-dev.nrp-nautilus.io
   rules:
-    - host: grafana-dev.nrp.nautilus.io
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                # Must match fullnameOverride in values.yaml.
-                name: grafana-dev
-                port:
-                  number: 80
-  tls:
-    - hosts:
-        - grafana-dev.nrp.nautilus.io
-      # No secretName = HAProxy ingress controller uses its own wildcard cert.
-      # To use a custom cert via cert-manager, uncomment and set secretName:
-      # secretName: grafana-dev-tls
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: grafana-dev
+          namespace: monitoring
+          port: 80
+          weight: 1
