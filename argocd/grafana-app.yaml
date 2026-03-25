@@ -46,6 +46,11 @@ spec:
       targetRevision: HEAD
       ref: values
 
+    # Source 3: Raw manifests — SealedSecrets + HTTPRoute.
+    - repoURL: https://github.com/Sam6734/nrp-grafana.git
+      targetRevision: HEAD
+      path: manifests
+
   # ── Destination ──────────────────────────────────────────────────────────
   destination:
     server: https://kubernetes.default.svc
