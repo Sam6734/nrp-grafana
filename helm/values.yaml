@@ -86,7 +86,7 @@ resources:
 persistence:
   enabled: true
   type: pvc
-  storageClassName: rook-ceph-block
+  storageClassName: linstor-ha
   size: 20Gi
   accessModes:
     - ReadWriteOnce
