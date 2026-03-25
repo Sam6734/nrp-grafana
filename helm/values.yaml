@@ -18,6 +18,11 @@ fullnameOverride: grafana-dev
 # ── Replicas ──────────────────────────────────────────────────────────────────
 replicas: 1
 
+# Recreate strategy required for RWO PVC — terminates old pod before starting
+# new one, preventing two pods fighting over the same volume.
+deploymentStrategy:
+  type: Recreate
+
 # ── Image ─────────────────────────────────────────────────────────────────────
 image:
   repository: grafana/grafana-enterprise
