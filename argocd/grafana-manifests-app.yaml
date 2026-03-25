@@ -17,7 +17,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: grafana-dev-config
-  namespace: argocd
+  namespace: argo
   labels:
     app.kubernetes.io/part-of: monitoring
     environment: dev
@@ -53,7 +53,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: grafana-dev-dashboards
-  namespace: argocd
+  namespace: argo
   labels:
     app.kubernetes.io/part-of: monitoring
     environment: dev
