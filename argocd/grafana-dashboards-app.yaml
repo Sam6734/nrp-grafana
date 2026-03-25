@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: grafana-dev-config
+  name: grafana-dev-dashboards
   namespace: argo
   labels:
     app.kubernetes.io/part-of: monitoring
@@ -13,7 +13,7 @@ spec:
   source:
     repoURL: https://github.com/Sam6734/nrp-grafana.git
     targetRevision: HEAD
-    path: manifests
+    path: dashboards/configmaps
     directory:
       recurse: false
   destination:
