@@ -21,9 +21,11 @@ metadata:
   labels:
     app.kubernetes.io/part-of: monitoring
     environment: dev
-  # Prevent Argo CD from deleting the PVC on app deletion.
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io/foreground
+  # No deletion finalizer — removing this app from Argo CD leaves the PVC
+  # and all resources intact in the monitoring namespace.
+  # Add the finalizer back only when promoting to production.
+  # finalizers:
+  #   - resources-finalizer.argocd.argoproj.io/foreground
 
 spec:
   project: default
