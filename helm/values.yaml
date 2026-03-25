@@ -75,6 +75,16 @@ containerSecurityContext:
   seccompProfile:
     type: RuntimeDefault
 
+# Plugin installer writes to /tmp — mount a writable emptyDir there so the
+# read-only root filesystem doesn't block plugin installation.
+extraVolumes:
+  - name: tmp
+    emptyDir: {}
+
+extraVolumeMounts:
+  - name: tmp
+    mountPath: /tmp
+
 # ── Resources (matching existing kube-prometheus Grafana limits) ──────────────
 resources:
   requests:
