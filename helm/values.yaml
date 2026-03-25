@@ -20,10 +20,8 @@ replicas: 1
 
 # ── Image ─────────────────────────────────────────────────────────────────────
 image:
-  repository: docker.io/grafana/grafana
-  # Pin to a specific tag for reproducibility.
-  # Chart 8.5.2 ships Grafana 11.4.0; update tag when upgrading chart.
-  tag: "11.4.0"
+  repository: grafana/grafana-enterprise
+  tag: "12.4.2"
   pullPolicy: IfNotPresent
 
 # ── Admin credentials ─────────────────────────────────────────────────────────
