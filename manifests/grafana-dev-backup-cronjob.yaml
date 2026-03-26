@@ -52,10 +52,16 @@ spec:
 
                   echo "=== Grafana SQLite backup ${DATE} ==="
 
-                  # VACUUM INTO creates a consistent point-in-time snapshot
-                  # of the live SQLite DB without needing to stop Grafana.
-                  sqlite3 /var/lib/grafana/grafana.db \
-                    "VACUUM INTO '/tmp/grafana-dev-${DATE}.db'"
+                  # python3 sqlite3.backup() creates a consistent point-in-time
+                  # snapshot of the live SQLite DB without needing to stop Grafana.
+                  python3 -c "
+import sqlite3
+src = sqlite3.connect('/var/lib/grafana/grafana.db')
+dst = sqlite3.connect('/tmp/grafana-dev-${DATE}.db')
+src.backup(dst)
+dst.close()
+src.close()
+"
 
                   echo "Snapshot created, encrypting..."
                   gpg -e --trust-model always \
