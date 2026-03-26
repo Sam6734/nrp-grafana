@@ -73,8 +73,6 @@ FOLDER_MAP: dict[str, str] = {
     "OSG-Shoveler":                     "Apps",
     "Falco-Talon":                      "Apps",
     "Spegel":                           "Apps",
-    "qaic-user":                        "Apps",
-    "qaic-admin":                       "Apps",
     # GPU
     "GPU-Cluster":                      "GPU",
     "GPU-Cluster-A100":                 "GPU",
@@ -85,6 +83,8 @@ FOLDER_MAP: dict[str, str] = {
     "K8SNvidiaGPU-Cluster":             "GPU",
     "K8SNvidiaGPU-Node":                "GPU",
     "GPU-cooling":                      "GPU",
+    "qaic-user":                        "GPU",
+    "qaic-admin":                       "GPU",
     # TIDE
     "TIDE-GPU-CPU-Utilization-Metrics": "TIDE",
     # General (explicit — also catches anything not listed above)
