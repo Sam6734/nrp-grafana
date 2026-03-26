@@ -92,32 +92,34 @@ extraVolumeMounts:
 # ── Backup sidecar ────────────────────────────────────────────────────────────
 # Runs inside the Grafana pod so it shares the already-mounted PVC volume —
 # avoids the DRBD double-mount error that a separate CronJob pod would hit.
+# Uses google/cloud-sdk:slim for python3 + gsutil. GCS encrypts at rest.
 # Triggers daily at 10:00 UTC via a polling loop.
 extraContainers: |
   - name: grafana-backup
-    image: gitlab-registry.nrp-nautilus.io/prp/synapse/backup
-    imagePullPolicy: Always
+    image: google/cloud-sdk:slim
+    imagePullPolicy: IfNotPresent
+    env:
+      - name: HOME
+        value: /tmp
+      - name: GOOGLE_APPLICATION_CREDENTIALS
+        value: /var/gcloud/service-account.json
     command:
       - bash
       - -c
       - |
         set -euo pipefail
+        gcloud auth activate-service-account --key-file=/var/gcloud/service-account.json
         echo "Grafana backup sidecar ready, polling for 10:00 UTC..."
         while true; do
           if [ "$(date -u +%H:%M)" = "10:00" ]; then
             DATE=$(date -u +%Y-%m-%d)
             SNAP=/tmp/grafana-dev-${DATE}.db
-            BACKUP=/tmp/backup-grafana-dev-${DATE}.db.gpg
             echo "=== Grafana SQLite backup ${DATE} ==="
             python3 -c "import sqlite3; s=sqlite3.connect('/var/lib/grafana/grafana.db'); d=sqlite3.connect('${SNAP}'); s.backup(d); d.close(); s.close()"
-            echo "Snapshot created, encrypting..."
-            gpg -e --trust-model always \
-              -r D88AA325 -r 596BFF0A -r 6FB31E6D -r 2D48BF8B \
-              -o "${BACKUP}" "${SNAP}"
-            echo "Sending to GCS..."
-            rclone copy "${BACKUP}" google-matrix:nautilus-grafana
-            echo "Done — backup uploaded: nautilus-grafana/$(basename ${BACKUP})"
-            rm -f "${SNAP}" "${BACKUP}"
+            echo "Uploading to GCS..."
+            gsutil cp "${SNAP}" gs://nautilus-grafana/backup-grafana-dev-${DATE}.db
+            echo "Done — gs://nautilus-grafana/backup-grafana-dev-${DATE}.db"
+            rm -f "${SNAP}"
             sleep 61
           fi
           sleep 30
@@ -125,7 +127,7 @@ extraContainers: |
     resources:
       requests:
         cpu: 10m
-        memory: 64Mi
+        memory: 128Mi
       limits:
         cpu: "1"
         memory: 1Gi
@@ -134,7 +136,7 @@ extraContainers: |
         mountPath: /var/lib/grafana
         readOnly: true
       - name: gcloud
-        mountPath: /root/gcloud
+        mountPath: /var/gcloud
 
 # ── Resources (matching existing kube-prometheus Grafana limits) ──────────────
 resources:
