@@ -176,7 +176,7 @@ grafana.ini:
     # Everyone who passes Authentik policy gets GrafanaAdmin.
     # Authentik only lets approved users through, so no further scoping needed.
     role_attribute_path: "'GrafanaAdmin'"
-    role_attribute_strict: false
+    role_attribute_strict: true
     allow_assign_grafana_admin: true
     skip_org_role_sync: false
 
