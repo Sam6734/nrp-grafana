@@ -63,8 +63,8 @@ spec:
                     -o "${BACKUP}" "/tmp/grafana-dev-${DATE}.db"
 
                   echo "Sending to GCS..."
-                  rclone copy "${BACKUP}" google-matrix:nautilus-grafana-dev
-                  echo "Done — backup uploaded: nautilus-grafana-dev/$(basename ${BACKUP})"
+                  rclone copy "${BACKUP}" google-matrix:nautilus-grafana
+                  echo "Done — backup uploaded: nautilus-grafana/$(basename ${BACKUP})"
               resources:
                 requests:
                   cpu: 100m
