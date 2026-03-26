@@ -80,10 +80,6 @@ containerSecurityContext:
 extraVolumes:
   - name: tmp
     emptyDir: {}
-  - name: gcloud
-    secret:
-      secretName: backup-google-service-account
-      defaultMode: 0444
 
 extraVolumeMounts:
   - name: tmp
@@ -99,14 +95,18 @@ extraContainers: |
     env:
       - name: HOME
         value: /tmp
-      - name: GOOGLE_APPLICATION_CREDENTIALS
-        value: /var/gcloud/service-account.json
+      - name: GCS_SA_JSON
+        valueFrom:
+          secretKeyRef:
+            name: backup-google-service-account
+            key: service-account.json
     command:
       - bash
       - -c
       - |
         set -euo pipefail
-        gcloud auth activate-service-account --key-file=/var/gcloud/service-account.json
+        echo "${GCS_SA_JSON}" > /tmp/sa.json
+        gcloud auth activate-service-account --key-file=/tmp/sa.json
         echo "Backup sidecar ready, polling for 10:00 UTC..."
         while true; do
           if [ "$(date -u +%H:%M)" = "10:00" ]; then
@@ -132,8 +132,6 @@ extraContainers: |
       - name: storage
         mountPath: /var/lib/grafana
         readOnly: true
-      - name: gcloud
-        mountPath: /var/gcloud
 
 # ── Resources (matching existing kube-prometheus Grafana limits) ──────────────
 resources:
