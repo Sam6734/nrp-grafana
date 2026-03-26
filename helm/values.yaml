@@ -83,7 +83,7 @@ extraVolumes:
   - name: gcloud
     secret:
       secretName: backup-google-service-account
-      defaultMode: 0420
+      defaultMode: 0444
 
 extraVolumeMounts:
   - name: tmp
