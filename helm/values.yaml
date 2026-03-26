@@ -170,6 +170,9 @@ grafana.ini:
     api_url: https://authentik.nrp-nautilus.io/application/o/userinfo/
     allow_sign_up: true
     use_pkce: true
+    email_attribute_path: email
+    login_attribute_path: preferred_username
+    name_attribute_path: name
     # Everyone who passes Authentik policy gets GrafanaAdmin.
     # Authentik only lets approved users through, so no further scoping needed.
     role_attribute_path: "'GrafanaAdmin'"
