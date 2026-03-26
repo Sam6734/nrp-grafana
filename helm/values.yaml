@@ -173,12 +173,11 @@ grafana.ini:
     email_attribute_path: email
     login_attribute_path: preferred_username
     name_attribute_path: name
-    # Everyone who passes Authentik policy gets GrafanaAdmin.
+    # Everyone who passes Authentik policy gets Admin.
     # Authentik only lets approved users through, so no further scoping needed.
-    role_attribute_path: "'GrafanaAdmin'"
-    role_attribute_strict: true
-    allow_assign_grafana_admin: true
-    skip_org_role_sync: false
+    # skip_org_role_sync: true means Grafana won't try to map roles from OAuth
+    # claims — new users get auto_assign_org_role (Admin) instead.
+    skip_org_role_sync: true
 
   # ── Anonymous access ──────────────────────────────────────────────────────
   auth.anonymous:
@@ -198,7 +197,7 @@ grafana.ini:
   # ── Users ────────────────────────────────────────────────────────────────
   users:
     auto_assign_org: true
-    auto_assign_org_role: Viewer
+    auto_assign_org_role: Admin
     default_theme: dark
 
   # ── Feature toggles ──────────────────────────────────────────────────────
