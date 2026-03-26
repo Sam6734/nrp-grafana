@@ -54,14 +54,7 @@ spec:
 
                   # python3 sqlite3.backup() creates a consistent point-in-time
                   # snapshot of the live SQLite DB without needing to stop Grafana.
-                  python3 -c "
-import sqlite3
-src = sqlite3.connect('/var/lib/grafana/grafana.db')
-dst = sqlite3.connect('/tmp/grafana-dev-${DATE}.db')
-src.backup(dst)
-dst.close()
-src.close()
-"
+                  python3 -c "import sqlite3; s=sqlite3.connect('/var/lib/grafana/grafana.db'); d=sqlite3.connect('/tmp/grafana-dev-${DATE}.db'); s.backup(d); d.close(); s.close()"
 
                   echo "Snapshot created, encrypting..."
                   gpg -e --trust-model always \
